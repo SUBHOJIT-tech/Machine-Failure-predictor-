@@ -6,98 +6,118 @@ import joblib
 model = joblib.load('model.pkl')
 scaler = joblib.load('scaler.pkl')
 
-# Page settings
-st.set_page_config(page_title="Machine Failure Predictor", layout="wide")
+# Set page config
+st.set_page_config(page_title="Smart Failure Predictor", page_icon="⚙️", layout="wide")
 
-# UI Style
+# Custom CSS for background + animations
 st.markdown(
-    '''
+    """
     <style>
-    html, body, [class*="css"] {
+    body, html {
         font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #e8f5e9, #fffde7);
-        animation: fadeIn 2s ease-in;
+        background: linear-gradient(135deg, #f0f4c3, #e1f5fe);
+        animation: backgroundFade 15s ease-in-out infinite alternate;
+    }
+    @keyframes backgroundFade {
+        0% { background-color: #f0f4c3; }
+        100% { background-color: #e1f5fe; }
     }
     h1 {
-        color: #1b5e20;
+        font-size: 42px;
+        font-weight: bold;
+        color: #1a237e;
         text-align: center;
-        font-size: 36px;
-        margin-top: 10px;
+        margin-bottom: 5px;
     }
-    .intro {
-        font-size: 18px;
+    h2 {
         text-align: center;
-        font-weight: 400;
-        color: #333;
-        margin-bottom: 20px;
+        color: #424242;
+        margin-bottom: 15px;
     }
-    @media only screen and (max-width: 768px) {
-        h1 { font-size: 26px; }
-        .intro { font-size: 16px; }
+    .footer {
+        text-align: center;
+        font-size: 13px;
+        color: #757575;
+        margin-top: 30px;
+    }
+    @media screen and (max-width: 768px) {
+        h1 { font-size: 30px; }
+        h2 { font-size: 18px; }
     }
     </style>
-    ''',
+    """,
     unsafe_allow_html=True
 )
 
 # Tabs
-tab1, tab2 = st.tabs(["📊 Predict", "📘 About"])
+tab1, tab2 = st.tabs(["📊 Predict", "ℹ️ About"])
 
-# ----------- Predict Tab ----------
+# --- Prediction Tab ---
 with tab1:
-    st.markdown("<h1>🚀 Machine Failure Predictor</h1>", unsafe_allow_html=True)
-    st.markdown('<div class="intro">Upload machine sensor data to predict failure risk using AI.</div>', unsafe_allow_html=True)
+    st.markdown("<h1>⚙️ Smart Machine Failure Predictor</h1>", unsafe_allow_html=True)
+    st.markdown("<h2>Upload your sensor data to see failure risk predictions using AI.</h2>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("📂 Upload your sensor data CSV", type=["csv"])
+    uploaded_file = st.file_uploader("📂 Upload your CSV file", type=["csv"])
 
     if uploaded_file:
         try:
             data = pd.read_csv(uploaded_file)
+            data.columns = data.columns.str.strip()
+
             st.subheader("📋 Uploaded Data Preview")
             st.dataframe(data.head(), use_container_width=True)
 
-            with st.spinner("🔄 Processing..."):
-                data.columns = data.columns.str.strip()
+            with st.spinner("🔄 Analyzing sensor data..."):
+                # Remove "Fail" column safely (case-insensitive)
                 features = data.loc[:, ~data.columns.str.lower().isin(['fail'])]
 
+                # Predict
                 scaled = scaler.transform(features)
                 preds = model.predict(scaled)
                 probs = model.predict_proba(scaled)[:, 1]
 
+                # Add results
                 data['Predicted Failure'] = preds
                 data['Failure Risk (%)'] = (probs * 100).round(2)
 
-            st.success("✅ Prediction complete!")
+            st.success("✅ Analysis complete!")
 
-            st.subheader("📊 Results")
+            st.subheader("📊 Prediction Output")
             st.dataframe(data[['Predicted Failure', 'Failure Risk (%)']], use_container_width=True)
 
-            st.subheader("📈 Risk Trend")
+            st.subheader("📈 Failure Risk Chart")
             st.line_chart(data['Failure Risk (%)'])
 
-            # Download predictions
+            # Download button
             csv = data.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Results as CSV", csv, "predicted_results.csv", "text/csv")
+            st.download_button("📥 Download Result CSV", csv, "machine_failure_predictions.csv", "text/csv")
 
+            # High risk warning
             high_risk = data[data['Failure Risk (%)'] > 80]
             if not high_risk.empty:
                 st.warning(f"⚠️ {len(high_risk)} machines are at HIGH risk of failure!")
 
         except Exception as e:
-            st.error(f"❌ Error: {e}")
+            st.error(f"❌ An error occurred while processing your file: {e}")
     else:
         st.info("📁 Please upload a CSV file to begin.")
 
-# ----------- About Tab ----------
+    st.markdown("<div class='footer'>Built with ❤️ by Subhojit | AI-powered reliability</div>", unsafe_allow_html=True)
+
+# --- About Tab ---
 with tab2:
-    st.markdown("<h1>📘 About This Capstone</h1>", unsafe_allow_html=True)
-    st.markdown('''
-    <div class="intro">
-    This capstone project uses a machine learning model to predict machine failure from real-time sensor readings.<br><br>
-    🔍 **Features Used**:
-    - Footfall, Temp Mode, AQ, USS, CS, VOC, RP, IP, Temperature<br>
-    - Trained on historical labeled data<br><br>
-    🎯 **Goal**: Enable industries to avoid unplanned downtime with proactive maintenance.<br><br>
-    💡 Built using **Python, Streamlit, scikit-learn**, and deployed for interviews and production-ready presentation.
-    </div>
-    ''', unsafe_allow_html=True)
+    st.markdown("<h1>📘 About This Project</h1>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style='text-align: center; font-size: 17px;'>
+        This capstone project uses machine learning to intelligently predict potential failures in machines
+        based on real-time sensor readings. <br><br>
+        ✅ Model Trained On: Historical machine sensor data<br>
+        ✅ Tools Used: Python, scikit-learn, Streamlit<br>
+        ✅ Deployed With: Streamlit Cloud<br><br>
+        <strong>Presented by:</strong> Subhojit | Data Science Capstone | 2025
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
